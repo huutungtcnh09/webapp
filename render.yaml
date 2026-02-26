@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: webapp-fullstack
+    env: node
+    buildCommand: npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend
+    startCommand: npm run start --prefix backend
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@webapp.com
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ENABLE_DB_INIT
+        value: "false"
