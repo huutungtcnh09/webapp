@@ -1,0 +1,27 @@
+{
+  "name": "webapp-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "install:all": "npm install --prefix services/api && npm install --prefix frontend && npm install --prefix apps/pos && npm install --prefix apps/admin",
+    "dev:api": "npm run --prefix services/api dev",
+    "dev:corporate": "npm run --prefix frontend dev",
+    "dev:admin": "npm run --prefix apps/admin dev:admin",
+    "dev:pos": "npm run --prefix apps/pos dev:pos",
+    "start:api": "npm run --prefix services/api start",
+    "build:admin": "npm run --prefix apps/admin build",
+    "build:corporate": "npm run --prefix frontend build",
+    "build:pos": "npm run --prefix apps/pos build",
+    "lint:admin": "npm run --prefix apps/admin lint",
+    "lint:corporate": "npm run --prefix frontend lint",
+    "lint:pos": "npm run --prefix apps/pos lint"
+  },
+  "dependencies": {
+    "ssh2": "^1.17.0"
+  }
+}

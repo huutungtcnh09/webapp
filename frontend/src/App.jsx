@@ -1,22 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 
-const CONTACTS_STORAGE_KEY = 'webapp_contacts'
-
-const getStoredContacts = () => {
-  try {
-    const savedContacts = localStorage.getItem(CONTACTS_STORAGE_KEY)
-    if (!savedContacts) {
-      return []
-    }
-
-    const parsedContacts = JSON.parse(savedContacts)
-    return Array.isArray(parsedContacts) ? parsedContacts : []
-  } catch {
-    return []
-  }
-}
-
 function App() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,7 +11,7 @@ function App() {
   const [status, setStatus] = useState('')
   const [statusType, setStatusType] = useState('neutral')
   const [loading, setLoading] = useState(false)
-  const [contacts, setContacts] = useState(getStoredContacts)
+  const [contacts, setContacts] = useState([])
   const [newContact, setNewContact] = useState({ name: '', phone: '', email: '' })
   const [editingContactId, setEditingContactId] = useState('')
   const [editContactForm, setEditContactForm] = useState({ name: '', phone: '', email: '' })
@@ -40,6 +24,27 @@ function App() {
   ]
 
   const currentScreen = screenItems.find((item) => item.key === activeScreen)
+
+  const fetchContacts = async (activeToken = token) => {
+    if (!activeToken) {
+      setContacts([])
+      return
+    }
+
+    const response = await fetch('/api/contacts', {
+      headers: {
+        Authorization: `Bearer ${activeToken}`,
+      },
+    })
+
+    const data = await response.json().catch(() => [])
+
+    if (!response.ok) {
+      throw new Error(data?.message || 'Không tải được danh sách liên hệ')
+    }
+
+    setContacts(Array.isArray(data) ? data : [])
+  }
 
   const handleLogin = async (event) => {
     event.preventDefault()
@@ -69,6 +74,7 @@ function App() {
       setUserEmail(data?.user?.email || email)
       setActiveScreen('create-contact')
       setIsSidebarCollapsed(true)
+      await fetchContacts(data.token)
       setStatus('Đăng nhập thành công')
       setStatusType('success')
     } catch {
@@ -103,8 +109,7 @@ function App() {
 
         const data = await response.json()
         setUserEmail(data?.user?.email || '')
-        setStatus('Đăng nhập bằng JWT thành công')
-        setStatusType('success')
+        await fetchContacts(token)
       } catch {
         setStatus('Không kiểm tra được phiên đăng nhập')
         setStatusType('error')
@@ -113,15 +118,11 @@ function App() {
 
     checkToken()
   }, [token])
-
-  useEffect(() => {
-    localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(contacts))
-  }, [contacts])
-
   const handleLogout = () => {
     localStorage.removeItem('token')
     setToken('')
     setUserEmail('')
+    setContacts([])
     setIsSidebarCollapsed(true)
     setStatus('Đã đăng xuất')
     setStatusType('neutral')
@@ -137,7 +138,7 @@ function App() {
     setIsSidebarCollapsed(false)
   }
 
-  const handleAddContact = (event) => {
+  const handleAddContact = async (event) => {
     event.preventDefault()
 
     if (!newContact.name.trim()) {
@@ -146,22 +147,40 @@ function App() {
       return
     }
 
-    const createdContact = {
-      id: `${Date.now()}`,
-      name: newContact.name.trim(),
-      phone: newContact.phone.trim(),
-      email: newContact.email.trim(),
-      createdAt: new Date().toISOString(),
-    }
+    try {
+      const response = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: newContact.name.trim(),
+          phone: newContact.phone.trim(),
+          email: newContact.email.trim(),
+        }),
+      })
 
-    setContacts((prevContacts) => [createdContact, ...prevContacts])
-    setNewContact({ name: '', phone: '', email: '' })
-    setStatus('Thêm liên hệ mới thành công')
-    setStatusType('success')
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        setStatus(data.message || 'Thêm liên hệ thất bại')
+        setStatusType('error')
+        return
+      }
+
+      setContacts((prevContacts) => [data, ...prevContacts])
+      setNewContact({ name: '', phone: '', email: '' })
+      setStatus('Thêm liên hệ mới thành công')
+      setStatusType('success')
+    } catch {
+      setStatus('Không thể kết nối API tạo liên hệ')
+      setStatusType('error')
+    }
   }
 
   const handleStartEdit = (contact) => {
-    setEditingContactId(contact.id)
+    setEditingContactId(String(contact.id))
     setEditContactForm({
       name: contact.name || '',
       phone: contact.phone || '',
@@ -169,7 +188,7 @@ function App() {
     })
   }
 
-  const handleSaveEdit = (event) => {
+  const handleSaveEdit = async (event) => {
     event.preventDefault()
 
     if (!editContactForm.name.trim()) {
@@ -178,25 +197,46 @@ function App() {
       return
     }
 
-    setContacts((prevContacts) =>
-      prevContacts.map((contact) => {
-        if (contact.id !== editingContactId) {
-          return contact
-        }
-
-        return {
-          ...contact,
+    try {
+      const response = await fetch(`/api/contacts/${editingContactId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
           name: editContactForm.name.trim(),
           phone: editContactForm.phone.trim(),
           email: editContactForm.email.trim(),
-        }
-      }),
-    )
+        }),
+      })
 
-    setEditingContactId('')
-    setEditContactForm({ name: '', phone: '', email: '' })
-    setStatus('Cập nhật liên hệ thành công')
-    setStatusType('success')
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        setStatus(data.message || 'Cập nhật liên hệ thất bại')
+        setStatusType('error')
+        return
+      }
+
+      setContacts((prevContacts) =>
+        prevContacts.map((contact) => {
+          if (String(contact.id) !== editingContactId) {
+            return contact
+          }
+
+          return data
+        }),
+      )
+
+      setEditingContactId('')
+      setEditContactForm({ name: '', phone: '', email: '' })
+      setStatus('Cập nhật liên hệ thành công')
+      setStatusType('success')
+    } catch {
+      setStatus('Không thể kết nối API cập nhật liên hệ')
+      setStatusType('error')
+    }
   }
 
   const handleCloseEditDialog = () => {
@@ -204,8 +244,9 @@ function App() {
     setEditContactForm({ name: '', phone: '', email: '' })
   }
 
-  const handleDeleteContact = (contactId) => {
-    const targetContact = contacts.find((contact) => contact.id === contactId)
+  const handleDeleteContact = async (contactId) => {
+    const normalizedId = String(contactId)
+    const targetContact = contacts.find((contact) => String(contact.id) === normalizedId)
     if (!targetContact) {
       return
     }
@@ -215,9 +256,32 @@ function App() {
       return
     }
 
-    setContacts((prevContacts) => prevContacts.filter((contact) => contact.id !== contactId))
+    try {
+      const response = await fetch(`/api/contacts/${normalizedId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
 
-    if (editingContactId === contactId) {
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        setStatus(data.message || 'Xóa liên hệ thất bại')
+        setStatusType('error')
+        return
+      }
+
+      setContacts((prevContacts) =>
+        prevContacts.filter((contact) => String(contact.id) !== normalizedId),
+      )
+    } catch {
+      setStatus('Không thể kết nối API xóa liên hệ')
+      setStatusType('error')
+      return
+    }
+
+    if (editingContactId === normalizedId) {
       handleCloseEditDialog()
     }
 

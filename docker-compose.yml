@@ -1,0 +1,23 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webapp-app
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      ENABLE_DB_INIT: "false"
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PHONE: ${ADMIN_PHONE}
+      ADMIN_ROLE: ${ADMIN_ROLE}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS}
+    ports:
+      - "80:5000"

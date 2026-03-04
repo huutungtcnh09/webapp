@@ -1,0 +1,21 @@
+.ui-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #f8fafc;
+  font-size: 14px;
+}
+
+.ui-button-primary {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #0f172a;
+  color: #fff;
+  cursor: pointer;
+}
+
+.ui-button-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
