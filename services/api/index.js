@@ -45,6 +45,12 @@ const FRONTEND_DIST_PATH_CANDIDATES = [
 const FRONTEND_DIST_PATH =
   FRONTEND_DIST_PATH_CANDIDATES.find((candidatePath) => fs.existsSync(candidatePath)) ||
   FRONTEND_DIST_PATH_CANDIDATES[1];
+const POS_DIST_PATH_CANDIDATES = [
+  path.resolve(__dirname, "../../apps/pos/dist"),
+  path.resolve(__dirname, "../pos/dist"),
+];
+const POS_DIST_PATH =
+  POS_DIST_PATH_CANDIDATES.find((candidatePath) => fs.existsSync(candidatePath)) || null;
 
 const normalizePhone = (value) => String(value || "").replace(/\s+/g, "").trim();
 
@@ -1842,6 +1848,14 @@ app.use("/api", contactsRouter);
 app.use("/api", productsRouter);
 app.use("/api", ordersRouter);
 app.use(authRouter);
+
+if (POS_DIST_PATH && fs.existsSync(POS_DIST_PATH)) {
+  app.use("/pos", express.static(POS_DIST_PATH));
+
+  app.get("/pos/{*path}", (req, res) => {
+    res.sendFile(path.join(POS_DIST_PATH, "index.html"));
+  });
+}
 
 if (fs.existsSync(FRONTEND_DIST_PATH)) {
   app.use(express.static(FRONTEND_DIST_PATH));
